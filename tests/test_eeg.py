@@ -2,8 +2,9 @@ import json
 
 import mne
 import numpy as np
+import pooch
 
-from eeg import REAR, SFREQ, alpha_phase, download, nolte_check
+from eeg import REAR, SFREQ, SOURCES, alpha_phase, download, nolte_check
 from part_b import run
 
 OTHERS = ["Fz", "Cz", "C3", "C4"]
@@ -62,16 +63,25 @@ def test_whole_analysis_runs_on_synthetic_volunteers(tmp_path):
     assert cached["accuracy"] == res["accuracy"]
 
 
-def test_download_runs_in_parallel_and_reports_failures(monkeypatch):
-    """Every volunteer is requested once, and a failed download is reported, not fatal."""
+def test_download_tries_the_fast_mirror_first_and_reports_failures(monkeypatch, tmp_path):
+    """Files come from the AWS copy first, fall back to PhysioNet, are checked against
+    their checksums, and a volunteer missing from both is reported rather than fatal."""
     asked = []
 
-    def fake_load(s, runs, **kw):
-        asked.append(s)
-        if s == 3:
+    def fake_retrieve(url, known_hash, fname, path, **kw):
+        asked.append(url)
+        assert known_hash.startswith("sha256:")
+        if "S003" in url or ("S005" in url and url.startswith(SOURCES[0])):
             raise OSError("simulated network failure")
-        return [f"S{s:03d}R{r:02d}.edf" for r in runs]
+        path.mkdir(parents=True, exist_ok=True)
+        (path / fname).write_bytes(b"edf")
+        return str(path / fname)
 
-    monkeypatch.setattr(mne.datasets.eegbci, "load_data", fake_load)
-    assert download(range(1, 11), workers=4) == [3]
-    assert sorted(asked) == list(range(1, 11))
+    monkeypatch.setattr(pooch, "retrieve", fake_retrieve)
+    assert download(range(1, 11), workers=4, dest=tmp_path) == [3]
+    assert (tmp_path / "S001" / "S001R02.edf").exists()
+    assert SOURCES[0] + "S001/S001R01.edf" in asked
+    assert SOURCES[1] + "S001/S001R01.edf" not in asked
+    assert SOURCES[1] + "S005/S005R01.edf" in asked
+    n = len(asked)
+    assert download([1, 2], dest=tmp_path) == [] and len(asked) == n  # nothing downloaded twice

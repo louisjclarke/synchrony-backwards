@@ -3,5 +3,6 @@ scipy>=1.11
 matplotlib>=3.8
 scikit-learn>=1.4
 mne>=1.6
+pooch>=1.5
 mne-connectivity>=0.7
 pytest>=8

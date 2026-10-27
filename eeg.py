@@ -5,9 +5,12 @@ Goldberger et al., 2000). Run 1 is one minute resting with eyes open and
 run 2 is one minute with eyes closed.
 """
 from concurrent.futures import ThreadPoolExecutor
+from importlib.resources import files
+from pathlib import Path
 
 import mne
 import numpy as np
+import pooch
 from mne_connectivity import spectral_connectivity_epochs
 from scipy.signal import hilbert
 
@@ -19,22 +22,67 @@ ALPHA = (8.0, 12.0)                     # alpha band, Hz
 EPOCH_SECONDS = 2.0
 
 
-def download(subjects, workers=8):
-    """Fetch every volunteer's two recordings, several at a time.
+# PhysioNet's own copy on AWS Open Data is much faster than physionet.org, which is the fallback.
+SOURCES = ["https://physionet-open.s3.amazonaws.com/eegmmidb/1.0.0/",
+           "https://physionet.org/files/eegmmidb/1.0.0/"]
+RUNS = [1, 2]  # 1 = resting with eyes open, 2 = resting with eyes closed
 
-    PhysioNet serves each file slowly, so downloading in parallel cuts the wait
-    several-fold. Returns the volunteers whose files could not be fetched.
+
+def data_dir():
+    """The folder where MNE keeps this dataset, so mne.datasets.eegbci.load_data finds the files."""
+    root = mne.get_config("MNE_DATASETS_EEGBCI_PATH", mne.get_config("MNE_DATA"))
+    root = Path(root).expanduser() if root else Path.home() / "mne_data"
+    return root / "MNE-eegbci-data" / "files" / "eegmmidb" / "1.0.0"
+
+
+def checksums():
+    """The published SHA-256 checksum of every file in the dataset, as shipped with MNE."""
+    text = files("mne").joinpath("data", "eegbci_checksums.txt").read_text()
+    return dict(line.split() for line in text.splitlines() if line.strip())
+
+
+def fetch(s, dest=None, sums=None):
+    """Download volunteer s's two recordings, unless already present.
+
+    Each file is checked against its published checksum, whichever server it comes from,
+    and a stalled connection gives up after 60 seconds rather than hanging.
     """
-    def fetch(s):
+    dest, sums = dest or data_dir(), sums or checksums()
+    for r in RUNS:
+        part = f"S{s:03d}/S{s:03d}R{r:02d}.edf"
+        if (dest / part).exists():
+            continue
+        error = None
+        for url in SOURCES:
+            try:
+                pooch.retrieve(url + part, known_hash=f"sha256:{sums[part]}",
+                               fname=Path(part).name, path=dest / Path(part).parent,
+                               downloader=pooch.HTTPDownloader(timeout=60))
+                error = None
+                break
+            except Exception as e:
+                error = e
+        if error is not None:
+            raise error
+
+
+def download(subjects, workers=8, dest=None):
+    """Fetch every volunteer's recordings, several at a time.
+
+    Returns the volunteers whose files could not be fetched from either server.
+    """
+    sums = checksums()
+
+    def get(s):
         try:
-            mne.datasets.eegbci.load_data(s, [1, 2], update_path=False)
+            fetch(s, dest, sums)
         except Exception as e:
             print(f"download failed for volunteer {s}: {e}", flush=True)
             return s
         return None
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        return [s for s in pool.map(fetch, subjects) if s is not None]
+        return [s for s in pool.map(get, subjects) if s is not None]
 
 
 def load_subject(s):
@@ -43,7 +91,7 @@ def load_subject(s):
     A few volunteers were recorded at a different rate, so they are resampled.
     """
     raws = []
-    for f in mne.datasets.eegbci.load_data(s, [1, 2], update_path=False):
+    for f in mne.datasets.eegbci.load_data(s, RUNS, update_path=False):
         raw = mne.io.read_raw_edf(f, preload=True, verbose=False)
         mne.datasets.eegbci.standardize(raw)  # e.g. "O1.." becomes "O1"
         raw.set_montage("standard_1005")
