@@ -118,7 +118,7 @@ pytest                      # 7 tests, also run by GitHub on every push
 
 ## Acknowledgement
 
-I first worked through Part A in Python myself, using exercises set by Claude, an AI assistant. The code in this repository was written with Claude's help. I ran the analyses, checked each step and can explain every result.
+The code in this repository was written with Claude's help. I ran the analyses, checked each step and can explain every result.
 
 ## Licence
 
