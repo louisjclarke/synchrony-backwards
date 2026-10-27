@@ -57,7 +57,17 @@ It is solved by least squares, one oscillator at a time.
 5. **A classifier tested on strangers.** Logistic regression on the 28 coherency values, scored with five-fold cross-validation split by volunteer (`GroupKFold`), so nobody is in both the training and the test set. A baseline using alpha power alone shows whether synchrony adds anything beyond the rhythm's strength.
 
 <!-- part-b:start -->
-*Results appear here after `part_b.py` runs.*
+| | |
+|---|---|
+| volunteers analysed | 109 |
+| alpha power, eyes closed ÷ eyes open (median) | 3.0 times |
+| Nolte check, \|imaginary coherency\| with no delay / with delay | 0.007 / 0.979 |
+| eyes open, rear pairs: phase-locking value / \|imaginary coherency\| | 0.97 / 0.04 |
+| \|imaginary coherency\| higher with eyes closed | 93 of 109 volunteers (Wilcoxon p = 2.4e-14) |
+| phase-locking value higher with eyes closed | 20 of 109 volunteers (Wilcoxon p = 3.9e-10) |
+| classifier accuracy on unseen volunteers: coherency | 76% (folds 68-82%) |
+| classifier accuracy on unseen volunteers: alpha power alone | 74% (folds 66-80%) |
+| classifier accuracy on unseen volunteers: both | 78% (folds 75-82%) |
 <!-- part-b:end -->
 
 ![Eyes open against eyes closed](figures/fig_eyes_closed.png)
