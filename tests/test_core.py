@@ -1,7 +1,5 @@
-import os, sys
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from synchrony import make_network, simulate, fit, stlsq, truth_row
 
 DT = 0.01

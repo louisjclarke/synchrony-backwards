@@ -1,0 +1,10 @@
+[project]
+name = "synchrony-backwards"
+version = "1.0.0"
+description = "Recovering who is coupled to whom from rhythms alone: Kuramoto simulations and resting EEG"
+requires-python = ">=3.11"
+license = "MIT"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

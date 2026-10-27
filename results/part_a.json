@@ -1,0 +1,13 @@
+{
+  "oscillators": 8,
+  "real_links": 18,
+  "cond_locked": 31595019062295.57,
+  "cond_restarts_median": 8.201824721189123,
+  "max_coupling_error": 0.0027810044245264454,
+  "noise_sd": 0.05,
+  "threshold": 0.5,
+  "sparse_kept": 18,
+  "sparse_false": 0,
+  "plain_nonzero_non_links": 38,
+  "non_links": 38
+}

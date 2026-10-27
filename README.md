@@ -1,11 +1,13 @@
 # Synchrony backwards
 
-![tests](https://github.com/louisjclarke/synchrony-backwards/actions/workflows/tests.yml/badge.svg)
-[![Open Part B in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/louisjclarke/synchrony-backwards/blob/main/notebooks/part_b_brain_rhythms.ipynb)
+[![tests](https://github.com/louisjclarke/synchrony-backwards/actions/workflows/tests.yml/badge.svg)](https://github.com/louisjclarke/synchrony-backwards/actions/workflows/tests.yml)
+[![reproduce](https://github.com/louisjclarke/synchrony-backwards/actions/workflows/reproduce.yml/badge.svg)](https://github.com/louisjclarke/synchrony-backwards/actions/workflows/reproduce.yml)
 
 Most models of synchronisation run forwards: given who is coupled to whom, predict the rhythm. This project runs one backwards. Given only the rhythms, can you work out the couplings, and when can that answer be trusted?
 
 It started with Steven Strogatz's two-line model of Romeo and Juliet, led to the Kuramoto model of coupled oscillators, and ends with open EEG recordings of 109 volunteers.
+
+Every number below is written by the code. The tables sit between markers in this file, and the scripts rewrite them each time they run.
 
 ## The model
 
@@ -21,94 +23,90 @@ The equation is nonlinear in the phases but **linear in the unknowns** ω<sub>i<
 
 It is solved by least squares, one oscillator at a time.
 
-## Part A: simulations (`part_a.py`)
+## Part A: simulations
 
-An 8-oscillator random network with 18 real links, simulated with SciPy's `solve_ivp`.
+`part_a.py` simulates an 8-oscillator random network with 18 real links using SciPy's `solve_ivp`, then tries to recover the links.
 
-**1. Synchrony hides its cause.** Run the network for a long time and it locks: the phase differences stop changing, so the columns of X become (almost) multiples of one another and the matrix is close to singular. Restarting the network from random phases twenty times, and keeping only the short stretch where it falls into step, fixes this.
+**Synchrony hides its cause.** Left alone, the network locks. The phase differences stop changing, the columns of X become almost multiples of one another, and the matrix is close to singular: the data no longer fix a single answer. Restarting the network from random phases twenty times, and keeping only the short stretch where it falls into step, fixes this.
 
-| | condition number of X |
+**Sparse regression finds the real links.** With measurement noise, plain least squares gives every non-link a small non-zero value. Sequentially thresholded least squares, the algorithm behind SINDy (Brunton et al., 2016), repeatedly sets coefficients below 0.5 to zero and refits on the rest.
+
+<!-- part-a:start -->
+| | |
 |---|---|
-| one locked run | 3.16 × 10<sup>13</sup> |
-| twenty restarts (median over oscillators) | 8.2 |
-
-With restarts, least squares recovered every coupling, with a largest error of **0.0028**.
-
-**2. Sparse regression finds the real links.** With measurement noise (0.05 rad) added, plain least squares gives every non-link a small non-zero value. Sequentially thresholded least squares, the algorithm behind SINDy (Brunton et al., 2016), repeatedly sets coefficients below 0.5 to zero and refits.
-
-| | real links kept | false links |
-|---|---|---|
-| sparse regression | 18 of 18 | 0 |
-| plain least squares | 18 of 18 | 38 non-links left non-zero |
-
-The exact figures depend on the random draws: my first version, written as I learned Python, gave 3.09 × 10<sup>13</sup> against 9.5 and a largest error of 0.0041, with the same conclusions.
+| condition number of X, one locked run | 3.16 × 10<sup>13</sup> |
+| condition number of X, twenty restarts (median) | 8.2 |
+| largest error in any recovered coupling, twenty restarts | 0.0028 |
+| sparse regression with 0.05 rad noise: real links kept | 18 of 18 |
+| sparse regression with 0.05 rad noise: false links | 0 |
+| plain least squares with 0.05 rad noise: non-links left non-zero | 38 of 38 |
+<!-- part-a:end -->
 
 ![Part A](figures/fig_part_a.png)
 
-*Left: one long run locks within seconds, after which the data carry almost no information about the couplings. Right: couplings recovered from twenty restarts against the true values.*
+*Left: the order parameter r measures how closely the phases agree. One long run locks within seconds, after which the data carry almost no information about the couplings. Right: couplings recovered from twenty restarts against the true values.*
 
-## Part B: brain rhythms (`notebooks/part_b_brain_rhythms.ipynb`)
+## Part B: brain rhythms
 
-Open data from the PhysioNet EEG Motor Movement/Imagery Dataset: 109 volunteers, 64 electrodes, one minute resting with eyes open and one with eyes closed. The analysis uses the alpha rhythm (8 to 12 Hz) at eight electrodes over the back of the head, where alpha is strongest.
+`part_b.py` uses open data from the PhysioNet EEG Motor Movement/Imagery Dataset: 109 volunteers, 64 electrodes, one minute resting with eyes open and one with eyes closed. It looks at the alpha rhythm (8 to 12 Hz) at eight electrodes over the back of the head, where alpha is strongest. The building blocks are in `eeg.py`.
 
-1. **Phases.** Band-pass filter to 8 to 12 Hz, then take the Hilbert transform. Each electrode's signal becomes a point circling the origin of the complex plane, and its angle is the phase.
+1. **Phases.** Each signal is band-pass filtered to 8 to 12 Hz, then put through the Hilbert transform. Each electrode's signal becomes a point circling the origin of the complex plane, and its angle is the phase. As a sanity check, alpha power should rise when the eyes close (Berger, 1929).
 2. **The old problem returns.** Neighbouring electrodes pick up the same brain sources at the same instant (volume conduction), so their phases move together whether or not anything is coupled. The phase-locking value counts this zero-delay agreement; imaginary coherency does not.
-3. **Nolte's check.** Mixing without delay gives a real cross-spectrum, so its imaginary part is zero. The notebook confirms this on synthetic signals before trusting it on real ones.
-4. **Eyes open against eyes closed.** Phase-locking value and |imaginary coherency| for all 28 electrode pairs in 2-second windows, compared within each volunteer with a Wilcoxon signed-rank test.
-5. **A classifier tested on strangers.** Logistic regression on the 28 coherency values, with five-fold cross-validation split by volunteer (`GroupKFold`), so nobody is in both the training and the test set. A baseline using alpha power alone shows whether synchrony adds anything beyond the rhythm's strength.
+3. **Nolte's check.** Mixing without delay gives a real cross-spectrum, so its imaginary part is zero (Nolte et al., 2004). This is confirmed on synthetic signals, where the answer is known, before trusting it on real ones.
+4. **Eyes open against eyes closed.** For every one of the 28 rear electrode pairs, the phase-locking value and |imaginary coherency| are computed over 2-second windows. Each volunteer is compared only with themselves, using a Wilcoxon signed-rank test.
+5. **A classifier tested on strangers.** Logistic regression on the 28 coherency values, scored with five-fold cross-validation split by volunteer (`GroupKFold`), so nobody is in both the training and the test set. A baseline using alpha power alone shows whether synchrony adds anything beyond the rhythm's strength.
 
-### Results
-
-<!-- Fill from results.json after running the notebook -->
-
-| | |
-|---|---|
-| volunteers analysed | RESULT |
-| eyes open, rear pairs: phase-locking value vs \|imaginary coherency\| | RESULT |
-| \|imaginary coherency\| higher with eyes closed | RESULT of RESULT volunteers (Wilcoxon p = RESULT) |
-| classifier accuracy on unseen volunteers, coherency | RESULT % |
-| classifier accuracy, alpha power alone | RESULT % |
-| classifier accuracy, both | RESULT % |
+<!-- part-b:start -->
+*Results appear here after `part_b.py` runs.*
+<!-- part-b:end -->
 
 ![Eyes open against eyes closed](figures/fig_eyes_closed.png)
+
 ![Classifier accuracy](figures/fig_accuracy.png)
 
 ## Next: larger networks
 
-For large networks, Restrepo, Ott and Hunt (2005) showed that the coupling strength at which synchrony first appears is set by the largest eigenvalue of the network's adjacency matrix. The next step is to test how well the backwards method works on bigger networks either side of that threshold.
+For large networks, Restrepo, Ott and Hunt (2005) showed that the coupling strength at which synchrony first appears is set by the largest eigenvalue of the network's adjacency matrix. The next step is to test how well the backwards method works on bigger networks on either side of that threshold.
 
-## Running it
+## Reproducing everything
+
+On GitHub, open **Actions → reproduce → Run workflow**. It runs both parts on GitHub's servers and commits the results, figures and updated tables back to this repository.
+
+Locally:
 
 ```bash
 pip install -r requirements.txt
-python part_a.py          # Part A: prints the results above and saves figures/fig_part_a.png
-pytest -q                 # the tests GitHub runs on every push
+python part_a.py            # a few seconds
+python part_b.py            # about 20 minutes; downloads about 300 MB from PhysioNet the first time
+python part_b.py --cached   # reruns the statistics from results/eeg_features.npz in seconds
+pytest                      # 6 tests, also run by GitHub on every push
 ```
 
-Part B is easiest in Google Colab (button at the top; *Runtime > Run all*, about 30 minutes, most of it downloading data).
-
-| file | what it does |
+| file | contents |
 |---|---|
-| `synchrony.py` | simulation, the linear system, least squares and sparse regression |
-| `part_a.py` | Part A results and figure |
-| `notebooks/part_b_brain_rhythms.ipynb` | Part B, the EEG analysis |
-| `tests/test_core.py` | checks that couplings are recovered, that locked data are ill-conditioned, and that sparse regression drops non-links |
-| `results/results.json` | Part B numbers, written by the notebook |
+| `synchrony.py` | Kuramoto simulation, the linear system, least squares and sparse regression |
+| `eeg.py` | loading the EEG, alpha phases, phase-locking value, imaginary coherency, Nolte's check |
+| `part_a.py`, `part_b.py` | the two analyses |
+| `report.py` | saves results and writes the tables into this README |
+| `tests/` | recovery of couplings, ill-conditioning of locked data, sparse regression, Hilbert phases, Nolte's check, and the whole EEG analysis on synthetic volunteers |
+| `results/` | `part_a.json`, `part_b.json`, and the EEG features for every recording |
+| `figures/` | the figures above |
 
 ## References
 
-- Strogatz, S. H. (1988). Love affairs and differential equations. *Mathematics Magazine*, 61(1), 35.
-- Strogatz, S. H. (2000). From Kuramoto to Crawford: exploring the onset of synchronization in populations of coupled oscillators. *Physica D*, 143, 1–20.
+- Berger, H. (1929). Über das Elektrenkephalogramm des Menschen. *Archiv für Psychiatrie und Nervenkrankheiten*, 87, 527–570.
 - Brunton, S. L., Proctor, J. L. and Kutz, J. N. (2016). Discovering governing equations from data by sparse identification of nonlinear dynamical systems. *PNAS*, 113(15), 3932–3937.
+- Goldberger, A. L. et al. (2000). PhysioBank, PhysioToolkit, and PhysioNet. *Circulation*, 101(23), e215–e220.
+- Gramfort, A. et al. (2013). MEG and EEG data analysis with MNE-Python. *Frontiers in Neuroscience*, 7, 267.
 - Nolte, G. et al. (2004). Identifying true brain interaction from EEG data using the imaginary part of coherency. *Clinical Neurophysiology*, 115(10), 2292–2307.
 - Restrepo, J. G., Ott, E. and Hunt, B. R. (2005). Onset of synchronization in large networks of coupled oscillators. *Physical Review E*, 71, 036151.
 - Schalk, G. et al. (2004). BCI2000: a general-purpose brain-computer interface (BCI) system. *IEEE Transactions on Biomedical Engineering*, 51(6), 1034–1043.
-- Goldberger, A. L. et al. (2000). PhysioBank, PhysioToolkit, and PhysioNet. *Circulation*, 101(23), e215–e220.
-- Gramfort, A. et al. (2013). MEG and EEG data analysis with MNE-Python. *Frontiers in Neuroscience*, 7, 267.
+- Strogatz, S. H. (1988). Love affairs and differential equations. *Mathematics Magazine*, 61(1), 35.
+- Strogatz, S. H. (2000). From Kuramoto to Crawford: exploring the onset of synchronization in populations of coupled oscillators. *Physica D*, 143, 1–20.
 
 ## Acknowledgement
 
-I wrote Part A myself while learning Python, using exercises set by Claude, an AI assistant. The Part B notebook and the tests were written with Claude's help; I ran the analysis, checked each step and can explain every result.
+I first worked through Part A in Python myself, using exercises set by Claude, an AI assistant. The code in this repository was written with Claude's help. I ran the analyses, checked each step and can explain every result.
 
 ## Licence
 
