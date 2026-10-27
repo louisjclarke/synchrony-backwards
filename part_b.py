@@ -1,11 +1,12 @@
 """Part B: does brain synchrony change when the eyes close, once zero-delay mixing is ignored?
 
-Run:  python part_b.py            (about 20 minutes; downloads about 300 MB from PhysioNet the first time)
+Run:  python part_b.py            (downloads about 300 MB from PhysioNet the first time, in parallel)
       python part_b.py --cached   (seconds; reuses results/eeg_features.npz)
 Writes results/part_b.json, results/eeg_features.npz, figures/fig_eyes_closed.png and
 figures/fig_accuracy.png, and the Part B table in README.md.
 """
 import sys
+import time
 from pathlib import Path
 
 import matplotlib
@@ -19,7 +20,7 @@ from sklearn.model_selection import GroupKFold, cross_val_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from eeg import features, load_subject, nolte_check
+from eeg import download, features, load_subject, nolte_check
 from report import save_json, update_readme
 
 ROOT = Path(__file__).resolve().parent
@@ -40,7 +41,7 @@ def collect(subjects, loader):
         for label, (plv, imc, pw) in enumerate(rows):  # 0 = eyes open, 1 = eyes closed
             for k, v in zip(F, (plv, imc, pw, label, s)):
                 F[k].append(v)
-        print(f"volunteer {s} done")
+        print(f"volunteer {s} done", flush=True)
     return {k: np.array(v) for k, v in F.items()}, skipped
 
 
@@ -121,6 +122,11 @@ def run(subjects=VOLUNTEERS, loader=load_subject, out=ROOT, cached=False):
         F, skipped = {k: data[k] for k in ("plv", "imc", "pow", "label", "group")}, list(data["skipped"])
     else:
         mne.set_log_level("ERROR")
+        if loader is load_subject:
+            t0 = time.time()
+            failed = download(subjects)
+            print(f"downloads finished in {time.time() - t0:.0f} s; "
+                  f"{len(failed)} volunteers could not be downloaded", flush=True)
         F, skipped = collect(subjects, loader)
         path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(path, skipped=np.array(skipped, dtype=int), **F)

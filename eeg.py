@@ -4,6 +4,8 @@ Data: PhysioNet EEG Motor Movement/Imagery Dataset (Schalk et al., 2004;
 Goldberger et al., 2000). Run 1 is one minute resting with eyes open and
 run 2 is one minute with eyes closed.
 """
+from concurrent.futures import ThreadPoolExecutor
+
 import mne
 import numpy as np
 from mne_connectivity import spectral_connectivity_epochs
@@ -15,6 +17,24 @@ PAIRS = np.tril_indices(len(REAR), -1)  # the 28 electrode pairs
 SFREQ = 160.0                           # samples per second
 ALPHA = (8.0, 12.0)                     # alpha band, Hz
 EPOCH_SECONDS = 2.0
+
+
+def download(subjects, workers=8):
+    """Fetch every volunteer's two recordings, several at a time.
+
+    PhysioNet serves each file slowly, so downloading in parallel cuts the wait
+    several-fold. Returns the volunteers whose files could not be fetched.
+    """
+    def fetch(s):
+        try:
+            mne.datasets.eegbci.load_data(s, [1, 2], update_path=False)
+        except Exception as e:
+            print(f"download failed for volunteer {s}: {e}", flush=True)
+            return s
+        return None
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return [s for s in pool.map(fetch, subjects) if s is not None]
 
 
 def load_subject(s):

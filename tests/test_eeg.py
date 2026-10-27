@@ -3,7 +3,7 @@ import json
 import mne
 import numpy as np
 
-from eeg import REAR, SFREQ, alpha_phase, nolte_check
+from eeg import REAR, SFREQ, alpha_phase, download, nolte_check
 from part_b import run
 
 OTHERS = ["Fz", "Cz", "C3", "C4"]
@@ -60,3 +60,18 @@ def test_whole_analysis_runs_on_synthetic_volunteers(tmp_path):
     assert json.loads((tmp_path / "results/part_b.json").read_text())["volunteers"] == 9
     cached = run(out=tmp_path, cached=True)
     assert cached["accuracy"] == res["accuracy"]
+
+
+def test_download_runs_in_parallel_and_reports_failures(monkeypatch):
+    """Every volunteer is requested once, and a failed download is reported, not fatal."""
+    asked = []
+
+    def fake_load(s, runs, **kw):
+        asked.append(s)
+        if s == 3:
+            raise OSError("simulated network failure")
+        return [f"S{s:03d}R{r:02d}.edf" for r in runs]
+
+    monkeypatch.setattr(mne.datasets.eegbci, "load_data", fake_load)
+    assert download(range(1, 11), workers=4) == [3]
+    assert sorted(asked) == list(range(1, 11))

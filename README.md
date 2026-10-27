@@ -77,9 +77,9 @@ Locally:
 ```bash
 pip install -r requirements.txt
 python part_a.py            # a few seconds
-python part_b.py            # about 20 minutes; downloads about 300 MB from PhysioNet the first time
+python part_b.py            # downloads about 300 MB from PhysioNet the first time (speed depends on PhysioNet)
 python part_b.py --cached   # reruns the statistics from results/eeg_features.npz in seconds
-pytest                      # 6 tests, also run by GitHub on every push
+pytest                      # 7 tests, also run by GitHub on every push
 ```
 
 | file | contents |
