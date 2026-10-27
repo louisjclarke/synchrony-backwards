@@ -70,6 +70,8 @@ It is solved by least squares, one oscillator at a time.
 | classifier accuracy on unseen volunteers: both | 78% (folds 75-82%) |
 <!-- part-b:end -->
 
+**What the results show.** With eyes open, rear electrode pairs have a phase-locking value of 0.97 but an |imaginary coherency| of only 0.04, so almost all of the apparent synchrony is zero-delay mixing: the same sources reaching neighbouring electrodes at the same instant. When the eyes close, the two measures disagree. Lagged coupling, measured by imaginary coherency, roughly doubles and rises in 93 of 109 volunteers, while the phase-locking value falls slightly in 89 of them. The classifier tells eyes open from closed in unseen volunteers 76% of the time, but alpha power alone manages 74% and the two together 78%: most of what separates the conditions is the strength of the rhythm, and lagged coupling adds a little on top.
+
 ![Eyes open against eyes closed](figures/fig_eyes_closed.png)
 
 ![Classifier accuracy](figures/fig_accuracy.png)
