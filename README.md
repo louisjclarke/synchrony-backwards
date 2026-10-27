@@ -1,7 +1,7 @@
 # Synchrony backwards
 
-![tests](https://github.com/YOUR-USERNAME/synchrony-backwards/actions/workflows/tests.yml/badge.svg)
-[![Open Part B in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR-USERNAME/synchrony-backwards/blob/main/notebooks/part_b_brain_rhythms.ipynb)
+![tests](https://github.com/louisjclarke/synchrony-backwards/actions/workflows/tests.yml/badge.svg)
+[![Open Part B in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/louisjclarke/synchrony-backwards/blob/main/notebooks/part_b_brain_rhythms.ipynb)
 
 Most models of synchronisation run forwards: given who is coupled to whom, predict the rhythm. This project runs one backwards. Given only the rhythms, can you work out the couplings, and when can that answer be trusted?
 
