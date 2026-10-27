@@ -1,0 +1,31 @@
+name: reproduce
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Cache the EEG downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/mne_data
+          key: eegbci-runs-1-2
+      - name: Part A, simulations
+        run: python part_a.py
+      - name: Part B, brain rhythms
+        run: python part_b.py
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md results figures
+          git diff --cached --quiet || git commit -m "Update results"
+          git push
