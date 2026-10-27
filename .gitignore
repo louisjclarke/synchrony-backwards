@@ -1,0 +1,4 @@
+__pycache__/
+.ipynb_checkpoints/
+mne_data/
+*.edf
