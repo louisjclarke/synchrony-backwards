@@ -141,7 +141,7 @@ If this is useful to you, GitHub's **Cite this repository** button (from `CITATI
 
 ## Acknowledgement
 
-The code in this repository was written with Claude's help. I ran the analyses, checked each step and can explain every result.
+The code in this repository was written with Claude's help. I ran the analyses, checked each step and can created every result.
 
 ## Licence
 
