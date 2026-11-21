@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "Synchrony backwards: recovering who is coupled to whom from rhythms alone"
+abstract: "Kuramoto simulations showing that synchrony makes the inverse problem ill-conditioned, sparse regression for recovering network links, and an analysis of resting EEG from 109 volunteers using the imaginary part of coherency."
+authors:
+  - family-names: Clarke
+    given-names: Louis
+version: 1.0.0
+date-released: 2026-11-21
+license: MIT
+repository-code: "https://github.com/louisjclarke/synchrony-backwards"
+url: "https://github.com/louisjclarke/synchrony-backwards"
+keywords:
+  - Kuramoto model
+  - synchronization
+  - inverse problems
+  - sparse regression
+  - SINDy
+  - EEG
+  - imaginary coherency
